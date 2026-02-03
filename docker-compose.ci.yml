@@ -1,0 +1,10 @@
+services:
+  postgres:
+    volumes: !reset
+
+  x-airflow-common:
+    build: !reset
+    depends_on: !reset
+    ports: !reset
+    env_file: !override env.example
+    volumes: !reset
