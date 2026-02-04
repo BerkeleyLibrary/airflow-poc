@@ -109,7 +109,7 @@ jobs:
             "$DOCKER_APP_IMAGE_ARM64" "$DOCKER_APP_IMAGE_X64"
 
 
-  test-startup:
+  test-docker-startup:
     runs-on: ubuntu-24.04
     needs: merge
     container:
@@ -124,6 +124,12 @@ jobs:
       compose-config: ${{ steps.artifacts.outputs.compose-config }}
       docker-events: ${{ steps.artifacts.outputs.docker-events }}
     steps:
+      - name: Set ARTIFACTS_DIR
+        run: echo "ARTIFACTS_DIR=${RUNNER_TEMP}/artifacts" >> $GITHUB_ENV
+
+      - name: Create the artifacts directory
+        run: mkdir -p "$ARTIFACTS_DIR/unittests"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -140,10 +146,6 @@ jobs:
       - name: Setup and start Airflow containers
         env:
           FERNET_KEY: ${{ secrets.FERNET_KEY }}
-          # below is just to avoid triggering GHA's secrets detection
-          _AIRFLOW_WWW_USER_PASSWORD: "::add-mask::airflow"
-          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ::add-mask::postgresql+psycopg2://airflow:airflow@postgres/airflow
-          AIRFLOW__CELERY__RESULT_BACKEND: ::add-mask::db+postgresql://airflow:airflow@postgres/airflow
         run: |
           docker compose up -d postgres redis --wait
           docker compose run airflow-init
@@ -154,27 +156,28 @@ jobs:
         id: artifacts
         env:
           FERNET_KEY: ${{ secrets.FERNET_KEY }}
-          # below is just to avoid triggering GHA's secrets detection
-          _AIRFLOW_WWW_USER_PASSWORD: ::add-mask::airflow
-          AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: ::add-mask::postgresql+psycopg2://airflow:airflow@postgres/airflow
-          AIRFLOW__CELERY__RESULT_BACKEND: ::add-mask::db+postgresql://airflow:airflow@postgres/airflow
         run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "compose-logs<<$EOF" | tee -a "$GITHUB_OUTPUT"
-          docker compose logs | tee -a "$GITHUB_OUTPUT"
-          echo "$EOF" | tee -a "$GITHUB_OUTPUT"
-          echo "compose-config<<$EOF" | tee -a "$GITHUB_OUTPUT"
-          docker compose config | tee -a "$GITHUB_OUTPUT"
-          echo "$EOF" | tee -a "$GITHUB_OUTPUT"
-          echo "docker-events<<$EOF" | tee -a "$GITHUB_OUTPUT"
-          docker events --format '{{ json . }}' --since $TEST_START --until `date +%s` | tee -a "$GITHUB_OUTPUT"
-          echo "$EOF" | tee -a "$GITHUB_OUTPUT"
+          docker compose logs | tee "${ARTIFACTS_DIR}/docker-services.log"
+          docker compose config | tee "${ARTIFACTS_DIR}/docker-compose.merged.yml"
+          docker events --json --since $TEST_START --until `date +%s` | tee "${ARTIFACTS_DIR}/docker-events.json"
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mokelumne Test Report (${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }})
+          path: ${{ env.ARTIFACTS_DIR }}
+          if-no-files-found: error
 
   test-dag-imports:
     runs-on: ubuntu-24.04
-    outputs:
-      xmlrunner: ${{ steps.artifacts.outputs.xmlrunner }}
     steps:
+      - name: Set ARTIFACTS_DIR
+        run: echo "ARTIFACTS_DIR=${RUNNER_TEMP}/artifacts" >> $GITHUB_ENV
+
+      - name: Create the artifacts directory
+        run: mkdir -p "$ARTIFACTS_DIR/unittests"
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -188,42 +191,11 @@ jobs:
         run: |
           python test/run_tests.py
 
-      - name: Copy out artifacts
-        id: artifacts
-        if: ${{ always() }}
-        run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "xmlrunner<<$EOF" | tee -a "$GITHUB_OUTPUT"
-          cat artifacts/unittest/airflow_test.xml | tee -a "$GITHUB_OUTPUT"
-          echo "$EOF" | tee -a "$GITHUB_OUTPUT"
-
-  upload-artifacts:
-    runs-on: ubuntu-24.04
-    needs:
-      - test-startup
-      - test-dag-imports
-    steps:
-      - name: Set ARTIFACTS_DIR
-        run: echo "ARTIFACTS_DIR=${RUNNER_TEMP}/artifacts" >> $GITHUB_ENV
-
-      - name: Create the artifacts directory
-        run: mkdir -p "$ARTIFACTS_DIR/unittests"
-      - name: Create artifact outputs
-        env:
-          COMPOSE_CONFIG: ${{ needs.test-startup.outputs.compose-config }}
-          COMPOSE_LOGS: ${{ needs.test-startup.outputs.compose-logs }}
-          DOCKER_EVENTS: ${{ needs.test-startup.outputs.docker-events }}
-          XMLRUNNER: ${{ needs.test-dag-imports.outputs.xmlrunner }}
-        run: |
-          echo "$COMPOSE_CONFIG" | tee "$ARTIFACTS_DIR/docker-compose.merged.yml"
-          echo "$COMPOSE_LOGS" | tee "$ARTIFACTS_DIR/docker-services.log"
-          echo "$DOCKER_EVENTS" | tee "$ARTIFACTS_DIR/docker-events.json"
-          echo "$XMLRUNNER" | tee "$ARTIFACTS_DIR/unittests/airflow_test.xml"
       - name: Upload test report
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mokelumne Test Report (${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }})
+          name: mokelumne Test Report (${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }})
           path: ${{ env.ARTIFACTS_DIR }}
           if-no-files-found: error
 
@@ -231,7 +203,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - merge
-      - upload-artifacts
+      - test-dag-imports
+      - test-docker-startup
     env:
       DOCKER_APP_IMAGE: ${{ needs.merge.outputs.image }}
     steps:
