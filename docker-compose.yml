@@ -268,7 +268,8 @@ services:
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config,tests}
+        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /home/airflow/{test,artifacts}
         echo
         echo "Running airflow config list to create default config file if missing."
         echo
@@ -277,18 +278,22 @@ services:
         echo "Files in shared volumes:"
         echo
         ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /home/airflow/{test,artifacts}
         echo
-        echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:0"
+        echo "Change ownership of files in /opt/airflow and /home/airflow to ${AIRFLOW_UID}:0"
         echo
         chown -R "${AIRFLOW_UID}:0" /opt/airflow/
+        chown -R "${AIRFLOW_UID}:0" /home/airflow/
         echo
         echo "Change ownership of files in shared volumes to ${AIRFLOW_UID}:0"
         echo
         chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,dags,plugins,config}
+        chown -v -R "${AIRFLOW_UID}:0" /home/airflow/{test,artifacts}
         echo
         echo "Files in shared volumes:"
         echo
         ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /home/airflow/{test,artifacts}
 
     # yamllint enable rule:line-length
     environment:

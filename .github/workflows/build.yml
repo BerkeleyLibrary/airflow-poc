@@ -119,6 +119,7 @@ jobs:
     env:
       COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
       DOCKER_APP_IMAGE: ${{ needs.merge.outputs.image }}
+      AIRFLOW_UID: "1001"
     outputs:
       compose-logs: ${{ steps.artifacts.outputs.compose-logs }}
       compose-config: ${{ steps.artifacts.outputs.compose-config }}

@@ -11,7 +11,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   airflow-scheduler:
@@ -19,7 +19,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   airflow-dag-processor:
@@ -27,7 +27,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   airflow-worker:
@@ -35,7 +35,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   airflow-triggerer:
@@ -43,7 +43,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   airflow-init:
@@ -51,7 +51,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   airflow-cli:
@@ -59,7 +59,7 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
 
   flower:
@@ -67,5 +67,5 @@ services:
     image: ${DOCKER_APP_IMAGE}
     depends_on: !reset
     ports: !reset
-    env_file: !override example.env
+    env_file: !reset
     volumes: !reset
