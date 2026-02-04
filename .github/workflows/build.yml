@@ -7,7 +7,6 @@ on:
   workflow_dispatch:
 
 env:
-  AIRFLOW_VERSION: "3.1.7"
   BUILD_SUFFIX: -build-${{ github.run_id }}_${{ github.run_attempt }}
   DOCKER_METADATA_SET_OUTPUT_ENV: 'true'
 
