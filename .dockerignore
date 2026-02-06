@@ -1,0 +1,3 @@
+# Ignore generated files
+**/*.py[cod]
+**/__pycache__
